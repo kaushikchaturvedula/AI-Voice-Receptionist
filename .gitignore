@@ -1,0 +1,35 @@
+# --- Secrets / local config ---
+.env
+.env.*
+!.env.example
+
+# --- Runtime data ---
+appointments.json
+
+# --- Python virtual environments ---
+.venv/
+.venv-*/
+venv/
+env/
+
+# --- Python bytecode / caches ---
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# --- Piper voice models (large binaries; download per README) ---
+*.onnx
+*.onnx.json
+
+# --- OS / editor cruft ---
+.DS_Store
+*.swp
+*~
+.idea/
+.vscode/
+
+# --- Logs ---
+*.log

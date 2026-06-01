@@ -1,0 +1,8 @@
+openai
+python-dotenv
+faster-whisper
+sounddevice
+numpy<2          # torch 2.2.x is built against the numpy 1.x ABI; numpy 2 breaks it (_ARRAY_API not found)
+silero-vad
+torch
+piper-tts
