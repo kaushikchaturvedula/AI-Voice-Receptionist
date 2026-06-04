@@ -1,0 +1,14 @@
+sequenceDiagram
+    autonumber
+    participant C as Caller
+    participant L as Listener thread
+    participant M as Main thread
+    participant S as Speaker
+
+    M->>S: speak reply (Piper TTS, frame by frame)
+    Note over L,S: agent_speaking = true<br/>gate threshold = predicted echo x AEC_MARGIN
+    S-->>L: agent's own echo (below threshold), ignored
+    C->>L: caller talks over the agent (above threshold)
+    L->>M: barge_in.set()
+    M-->>S: stop playback within ~150 ms
+    L->>M: enqueue caller utterance, next turn

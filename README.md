@@ -33,43 +33,10 @@ Swap those two and the same engine becomes any other voice agent.
 
 ## 🏗️ Architecture
 
-```mermaid
-flowchart LR
-    Caller["Caller"]
+![Architecture: the two-thread voice pipeline and echo-control loop](docs/architecture.png)
 
-    subgraph LT["Listener thread &nbsp;(always-on)"]
-        direction TB
-        MIC["sd.InputStream<br/>16 kHz mono · 512-sample chunks"]
-        VAD["Silero VAD<br/>endpointing"]
-        GATE{"Echo / energy gate<br/>caller or self-echo?"}
-        Q[["utterance queue"]]
-        MIC --> VAD --> GATE
-        GATE -->|real caller| Q
-        GATE -.->|self-echo: drop| DROP(("discard"))
-    end
-
-    subgraph MT["Main thread"]
-        direction TB
-        ASR["faster-whisper<br/>ASR"]
-        AGENT["Agent loop<br/>OpenAI tool-calling"]
-        TTS["Piper TTS<br/>interruptible playback"]
-        SPK["sd.OutputStream<br/>to speaker"]
-        ASR --> AGENT --> TTS --> SPK
-    end
-
-    TOOLS["tools.py<br/>availability · booking · transfer"]
-    DB[("appointments.json")]
-
-    Caller -->|speech| MIC
-    Q --> ASR
-    AGENT <-->|tool calls| TOOLS
-    TOOLS --> DB
-    SPK -->|audio| Caller
-
-    SPK -.->|acoustic echo| MIC
-    TTS -.->|agent_speaking + playback level| GATE
-    GATE -.->|barge_in: interrupt| TTS
-```
+> Diagram sources live in [`docs/`](docs/) (`.mmd` + `.svg`); regenerate with
+> `mmdc -i docs/architecture.mmd -o docs/architecture.svg`.
 
 **The two threads share three signals** (`threading.Event`s): `agent_speaking` (TTS is playing),
 `barge_in` (caller interrupted), and `stop` (clean shutdown). The dotted lines are the echo-control
@@ -78,22 +45,7 @@ genuine interruption raises `barge_in` to cut playback off.
 
 ### A turn, and a barge-in
 
-```mermaid
-sequenceDiagram
-    autonumber
-    participant C as Caller
-    participant L as Listener thread
-    participant M as Main thread
-    participant S as Speaker
-
-    M->>S: speak reply (Piper TTS, frame by frame)
-    Note over L,S: agent_speaking = true<br/>gate threshold = predicted echo × AEC_MARGIN
-    S-->>L: agent's own echo (below threshold) → ignored
-    C->>L: caller talks over the agent (above threshold)
-    L->>M: barge_in.set()
-    M-->>S: stop playback within ~150 ms
-    L->>M: enqueue caller utterance → next turn
-```
+![Sequence: a turn and a barge-in, showing self-echo ignored but a real caller honored](docs/sequence.png)
 
 ---
 

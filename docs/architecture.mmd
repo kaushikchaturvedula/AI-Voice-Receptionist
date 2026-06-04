@@ -1,0 +1,35 @@
+flowchart LR
+    Caller["Caller"]
+
+    subgraph LT["Listener thread &nbsp;(always-on)"]
+        direction TB
+        MIC["sd.InputStream<br/>16 kHz mono · 512-sample chunks"]
+        VAD["Silero VAD<br/>endpointing"]
+        GATE{"Echo / energy gate<br/>caller or self-echo?"}
+        Q[["utterance queue"]]
+        MIC --> VAD --> GATE
+        GATE -->|real caller| Q
+        GATE -.->|self-echo: drop| DROP(("discard"))
+    end
+
+    subgraph MT["Main thread"]
+        direction TB
+        ASR["faster-whisper<br/>ASR"]
+        AGENT["Agent loop<br/>OpenAI tool-calling"]
+        TTS["Piper TTS<br/>interruptible playback"]
+        SPK["sd.OutputStream<br/>to speaker"]
+        ASR --> AGENT --> TTS --> SPK
+    end
+
+    TOOLS["tools.py<br/>availability · booking · transfer"]
+    DB[("appointments.json")]
+
+    Caller -->|speech| MIC
+    Q --> ASR
+    AGENT <-->|tool calls| TOOLS
+    TOOLS --> DB
+    SPK -->|audio| Caller
+
+    SPK -.->|acoustic echo| MIC
+    TTS -.->|agent_speaking + playback level| GATE
+    GATE -.->|barge_in: interrupt| TTS
